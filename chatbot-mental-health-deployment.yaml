@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatbot-mental-health
+  labels:
+    app: chatbot-mental-health
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chatbot-mental-health
+  template:
+    metadata:
+      labels:
+        app: chatbot-mental-health
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8000"
+    spec:
+      containers:
+      - name: chatbot
+        image: lionzwarrior10/mental-health-chatbot:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8501
+          name: streamlit-http
+          protocol: TCP
+        - containerPort: 8000
+          name: metrics-http
+          protocol: TCP
+        env:
+        - name: MONGO_HOST
+          value: mongodb-service
+        - name: MONGO_PORT
+          value: "27017"
+        - name: QDRANT_URL
+          value: "http://qdrant-service:6333"
+        - name: OLLAMA_MODELS_1
+          value: "llama3.1:latest"
+        - name: OLLAMA_MODELS_2
+          value: "openchat:latest"
+        - name: OLLAMA_URL_1
+          value: "http://ollama-llama31-service:11434"
+        - name: OLLAMA_URL_2
+          value: "http://ollama-openchat-service:11434"

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-llama31-pvc
+  namespace: remmanuel
+  labels:
+    app: ollama-llama31
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  volumeName: ollama-llama31-pv

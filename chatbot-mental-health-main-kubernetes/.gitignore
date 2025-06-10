@@ -1,0 +1,10 @@
+fastembed_cache
+src/.streamlit/secrets.toml
+cli/
+mhc/
+counselpcu-bot.zip
+zip_files.txt
+zip.sh
+**/*.ipynb_checkpoints/
+**/*__pycache__/
+venv/

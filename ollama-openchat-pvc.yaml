@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-openchat-pvc
+  namespace: remmanuel
+  labels:
+    app: ollama-openchat
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  volumeName: ollama-openchat-pv

@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: chatbot-mental-health-monitor
+
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: chatbot-mental-health
+  
+  endpoints:
+  - port: metrics-http
+    interval: 15s
+
+  namespaceSelector:
+    matchNames:
+    - remmanuel

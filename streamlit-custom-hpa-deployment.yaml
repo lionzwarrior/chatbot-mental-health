@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: streamlit-custom-hpa
+  labels:
+    app: streamlit-custom-hpa
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: streamlit-custom-hpa
+  template:
+    metadata:
+      labels:
+        app: streamlit-custom-hpa
+    spec:
+      serviceAccountName: streamlit-custom-hpa
+      containers:
+      - name: autoscaler
+        image: lionzwarrior10/streamlit-custom-hpa:latest
+        imagePullPolicy: Always
+        env:
+        - name: PROMETHEUS_URL
+          value: "http://prometheus-operated.remmanuel.svc.cluster.pakcarik:9090"
+        - name: DEPLOYMENT_NAME
+          value: "chatbot-mental-health"
+        - name: NAMESPACE
+          value: "remmanuel"

@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama-llama31-deployment
+  namespace: remmanuel
+  labels:
+    app: ollama-llama31
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama-llama31
+  template:
+    metadata:
+      labels:
+        app: ollama-llama31
+    spec:
+      nodeSelector:
+        nvidia.com/gpu: "true"
+      tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Exists"
+        effect: "NoSchedule"
+      containers:
+      - name: ollama-server
+        image: ollama/ollama:latest
+        ports:
+        - containerPort: 11434
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+            memory: "32Gi"
+            cpu: "8"
+          requests:
+            nvidia.com/gpu: 1
+            memory: "24Gi"
+            cpu: "4"
+        volumeMounts:
+        - name: ollama-data
+          mountPath: /root/.ollama
+        env:
+        - name: OLLAMA_HOST
+          value: "0.0.0.0"
+
+      initContainers:
+      - name: model-puller
+        image: ollama/ollama:latest
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            set -e
+            echo "Starting Ollama server in background..."
+            ollama serve &
+
+            echo "Waiting for Ollama to become available..."
+            for i in {1..10}; do
+              if ollama list > /dev/null; then
+                echo "Ollama is up!"
+                break
+              fi
+              echo "Waiting..."
+              sleep 3
+            done
+
+            echo "Pulling llama3.1:latest..."
+            ollama pull llama3.1:latest
+            echo "Model pull complete."
+
+        volumeMounts:
+        - name: ollama-data
+          mountPath: /root/.ollama
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+            memory: "16Gi"
+            cpu: "4"
+          requests:
+            nvidia.com/gpu: 1
+            memory: "16Gi"
+            cpu: "4"
+
+      volumes:
+      - name: ollama-data
+        persistentVolumeClaim:
+          claimName: ollama-llama31-pvc

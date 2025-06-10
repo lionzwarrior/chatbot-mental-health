@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qdrant-nas-pvc-remmanuel
+  namespace: remmanuel
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi
+  volumeName: qdrant-nas-pv-remmanuel

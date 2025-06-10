@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: chatbot-mental-health-service
+  labels:
+    app: chatbot-mental-health
+spec:
+  selector:
+    app: chatbot-mental-health
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8501
+      name: http
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+      name: metrics-http
+  type: ClusterIP

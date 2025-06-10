@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llama31-custom-hpa
+  namespace: remmanuel
+spec: 
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llama31-custom-hpa
+  template:
+    metadata:
+      labels:
+        app: llama31-custom-hpa
+    spec:
+      serviceAccountName: llama31-custom-hpa
+      containers:
+        - name: autoscaler
+          image: lionzwarrior10/llama31-custom-hpa:latest
+          imagePullPolicy: Always

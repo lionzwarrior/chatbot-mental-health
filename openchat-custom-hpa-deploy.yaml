@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openchat-custom-hpa
+  namespace: remmanuel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openchat-custom-hpa
+  template:
+    metadata:
+      labels:
+        app: openchat-custom-hpa
+    spec:
+      serviceAccountName: openchat-custom-hpa
+      containers:
+        - name: autoscaler
+          image: lionzwarrior10/openchat-custom-hpa:latest
+          imagePullPolicy: Always
