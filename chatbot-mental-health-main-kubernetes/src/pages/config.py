@@ -12,7 +12,7 @@ if "user" not in cookies or not cookies["user"]:
     st.switch_page("pages/authentication.py")
 else:
     # Connect ollama to docker
-    ollama_client = ollama.Client(host=st.secrets["ollama"]["url"][st.secrets["ollama"]["models"].index(cookies["chatbot"])])
+    ollama_client = ollama.Client(host=st.secrets["ollama"]["url"])
     
     st.title("Configuration")
     
@@ -28,9 +28,12 @@ else:
         print(current_settings)
         
         models = [i for i in ollama_client.list().get("models")]
-        model = st.selectbox("Model:", 
-                             [current_settings["model"]] + [model.get("name") for model in models if model != current_settings["model"]], 
-                             key="model"
+        model = st.selectbox(
+                    "Model:",
+                    [current_settings["model"]] + [
+                        m.model for m in models if m.model != current_settings["model"]
+                    ],
+                    key="model"
                 )
         
         embedding = st.selectbox("Embedding Model:", 
@@ -46,6 +49,9 @@ else:
         save_button = st.button("Save Configuration")
         
         if save_button:
+            cookies["chatbot"] = model
+            cookies["embedding"] = embedding
+            cookies["vector_store"] = vector_store
             st.session_state.chatbot = Chatbot(model, embedding, vector_store)
             st.success("Successfully configuring chatbot!!!")
             time.sleep(3)

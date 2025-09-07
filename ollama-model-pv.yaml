@@ -1,13 +1,15 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: ollama-llama31-pv
+  name: ollama-model-pv
+  namespace: remmanuel
 spec:
   capacity:
-    storage: 50Gi
+    storage: 100Gi
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
+  storageClassName: ollama-nfs
   nfs:
     path: /media/nfs-codex/hpc/public/remmanuel
     server: nas

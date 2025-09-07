@@ -65,7 +65,7 @@ def build_sidebar():
             st.switch_page("pages/authentication.py")
 
         with st.container(border=True):
-            st.markdown("""Chatbot might make mistakse, please do not hesitate to reach out Pusat Konseling dan Pengembangan Pribadi 
+            st.markdown("""Chatbot might make mistakes, please do not hesitate to reach out Pusat Konseling dan Pengembangan Pribadi 
             (PKPP) at:
             \n📍 Universitas Kristen Petra, Gedung D.111, Jl. Siwalankerto 121-131, Surabaya
             \n🕛 Senin - Jumat, 07.30 - 15.30 WIB

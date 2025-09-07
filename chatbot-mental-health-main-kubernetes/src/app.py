@@ -1,12 +1,12 @@
 import streamlit as st
 import json
 import threading
-import time
+
+st.set_page_config(initial_sidebar_state="auto")
 
 from utils.sidebar import build_sidebar
-from core.chatbot import Chatbot
 from utils.utils import get_cookies
-from utils.metrics import start_metrics_server, increment_page_view, increment_button_click, observe_chatbot_response_time
+from utils.metrics import start_metrics_server
 
 if "metrics_server_thread" not in st.session_state:
     metrics_thread = threading.Thread(target=start_metrics_server, args=(8000,), daemon=True)
@@ -15,8 +15,11 @@ if "metrics_server_thread" not in st.session_state:
     print("Metrics server thread initialized and started.")
 
 
-st.set_page_config(initial_sidebar_state="auto")
 cookies = get_cookies()
+
+if not cookies.ready():
+    st.info("Waiting for cookies to be ready...")
+    st.stop() 
 
 # Styling
 st.markdown("""

@@ -1,16 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: ollama-llama31-service
+  name: ollama-model-service
   namespace: remmanuel
-  labels:
-    app: ollama-llama31
 spec:
   selector:
-    app: ollama-llama31
+    app: ollama-model
   ports:
     - protocol: TCP
       port: 11434
       targetPort: 11434
-      nodePort: 31400
-  type: NodePort 
+  type: ClusterIP

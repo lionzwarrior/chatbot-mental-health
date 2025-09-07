@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: llama31-custom-hpa
+  name: ollama-model-custom-hpa
   namespace: remmanuel
 spec: 
   replicas: 1
   selector:
     matchLabels:
-      app: llama31-custom-hpa
+      app: ollama-model-custom-hpa
   template:
     metadata:
       labels:
-        app: llama31-custom-hpa
+        app: ollama-model-custom-hpa
     spec:
-      serviceAccountName: llama31-custom-hpa
+      serviceAccountName: ollama-model-custom-hpa
       containers:
         - name: autoscaler
-          image: lionzwarrior10/llama31-custom-hpa:latest
+          image: lionzwarrior10/ollama-model-custom-hpa:latest
           imagePullPolicy: Always

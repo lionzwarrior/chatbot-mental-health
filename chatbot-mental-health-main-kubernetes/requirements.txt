@@ -1,12 +1,12 @@
 llama-index
-llama-index-embeddings-fastembed
+llama-index-embeddings-fastembed==0.3.2
 llama-index-llms-ollama
 llama-index-vector-stores-qdrant
 llama-index-readers-json
 llama-index-readers-web
 
 qdrant_client
-fastembed
+fastembed==0.5.1
 unstructured[all-docs]
 streamlit==1.32.2
 streamlit-modal
@@ -23,3 +23,4 @@ beautifulsoup4
 validators
 langchain-community
 prometheus_client
+tenacity

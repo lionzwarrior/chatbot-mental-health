@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ollama-model-prepull
+  namespace: remmanuel
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: model-puller
+          image: ollama/ollama:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "=== Pulling Ollama models ==="
+              ollama pull llama3.1:latest
+              ollama pull openchat:latest
+              echo "=== Models pulled successfully ==="
+          volumeMounts:
+            - name: ollama-data
+              mountPath: /root/.ollama
+          resources:
+            requests:
+              cpu: "2"
+              memory: "8Gi"
+            limits:
+              cpu: "2"
+              memory: "8Gi"
+      volumes:
+        - name: ollama-data
+          persistentVolumeClaim:
+            claimName: ollama-model-pvc

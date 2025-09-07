@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: chatbot
-        image: lionzwarrior10/mental-health-chatbot:latest
+        image: lionzwarrior10/chatbot-mental-health:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8501
@@ -30,17 +30,22 @@ spec:
           name: metrics-http
           protocol: TCP
         env:
-        - name: MONGO_HOST
-          value: mongodb-service
-        - name: MONGO_PORT
-          value: "27017"
+        - name: MONGO_URI
+          value: "mongodb://mongodb-service:27017"
         - name: QDRANT_URL
           value: "http://qdrant-service:6333"
-        - name: OLLAMA_MODELS_1
-          value: "llama3.1:latest"
-        - name: OLLAMA_MODELS_2
-          value: "openchat:latest"
-        - name: OLLAMA_URL_1
-          value: "http://ollama-llama31-service:11434"
-        - name: OLLAMA_URL_2
-          value: "http://ollama-openchat-service:11434"
+        - name: OLLAMA_URL
+          value: "http://ollama-model-service:11434"
+        - name: OLLAMA_NUM_CTX
+          valueFrom:
+            configMapKeyRef:
+              name: ollama-config
+              key: num_ctx
+        resources:
+            requests:
+              cpu: "2"
+              memory: "4Gi"
+            limits:
+              cpu: "4"
+              memory: "8Gi"
+

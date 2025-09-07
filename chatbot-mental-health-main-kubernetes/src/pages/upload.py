@@ -5,10 +5,6 @@ import streamlit as st
 from utils.sidebar import build_sidebar
 from core.chatbot import Chatbot
 
-from unstructured.partition.html import partition_html
-from llama_index.readers.web import SimpleWebPageReader
-from llama_index.readers.web import TrafilaturaWebReader
-from llama_index.core import SummaryIndex
 from langchain_community.document_loaders import AsyncChromiumLoader
 from langchain_community.document_transformers import Html2TextTransformer
 

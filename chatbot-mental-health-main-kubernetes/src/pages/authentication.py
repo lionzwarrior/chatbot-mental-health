@@ -1,9 +1,12 @@
 import streamlit as st
-from core.connection import Connection
 import re
 import bcrypt
-from utils.utils import get_cookies
 import json
+
+st.set_page_config(initial_sidebar_state="collapsed")
+
+from core.connection import Connection
+from utils.utils import get_cookies
 
 def validate_email(email):
     regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
@@ -28,9 +31,6 @@ def validate_pass(input, password):
 
 conn = Connection()
 cookies = get_cookies()
-
-# Hide Sidebar
-st.set_page_config(initial_sidebar_state="collapsed")
 
 # Styling
 st.markdown(

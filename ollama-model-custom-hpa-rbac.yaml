@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ollama-model-custom-hpa-sa
+  namespace: remmanuel
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: remmanuel
+  name: ollama-model-custom-hpa-role
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "deployments/scale"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods", "nodes"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ollama-model-custom-hpa-rb
+  namespace: remmanuel
+subjects:
+  - kind: ServiceAccount
+    name: ollama-model-custom-hpa-sa
+    namespace: remmanuel
+roleRef:
+  kind: Role
+  name: ollama-model-custom-hpa-role
+  apiGroup: rbac.authorization.k8s.io

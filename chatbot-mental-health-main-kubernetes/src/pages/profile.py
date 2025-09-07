@@ -205,9 +205,8 @@ def settings_panel():
 
 
 def config():
-    ollama_client = ollama.Client(host=st.secrets["ollama"]["url"][st.secrets["ollama"]["models"].index(cookies["chatbot"])])
-
     st.title("Configuration")
+    ollama_client = ollama.Client(host=st.secrets["ollama"]["url"])
 
     if "chatbot" not in st.session_state:
         # st.warning("Please configure your chatbot first!")
@@ -218,9 +217,12 @@ def config():
             "model": chatbot.llm, "embedding": chatbot.embedding_model, "vector_store": chatbot.vector_store}
         print(current_settings)
 
+        models = [i for i in ollama_client.list().get("models")]
         model = st.selectbox(
                     "Model:",
-                    st.secrets["ollama"]["models"],
+                    [current_settings["model"]] + [
+                        m.model for m in models if m.model != current_settings["model"]
+                    ],
                     key="model"
                 )
 
@@ -239,6 +241,8 @@ def config():
 
         if save_button:
             cookies["chatbot"] = model
+            cookies["embedding"] = embedding
+            cookies["vector_store"] = vector_store
             st.session_state.chatbot = Chatbot(model, embedding, vector_store)
             st.success("Successfully configuring chatbot!!!")
             time.sleep(3)
