@@ -1,10 +1,11 @@
 import streamlit as st
 import time
 import json
+from datetime import datetime, timedelta, timezone
 
 try:
     from utils.sidebar import build_sidebar
-    from core.chatbot import Chatbot
+    from core.chatbot import Chatbot, get_first_available_model
     from core.chat_session import ChatSession
     from utils.utils import get_cookies
 except ImportError as e:
@@ -36,6 +37,8 @@ st.markdown(
 )
 
 cookies = get_cookies()
+tz = timezone(timedelta(hours=7))
+LOG_FILE = "total_response_time.log"
 
 if "user" not in cookies or not cookies["user"]:
     st.switch_page("pages/authentication.py")
@@ -95,9 +98,7 @@ else:
                     )
                     st.stop()
             else:
-                default_llm = (
-                    "llama3.1:latest"
-                )
+                default_llm = get_first_available_model()
                 default_embedding_model = "intfloat/multilingual-e5-large"
                 default_vector_store = "Qdrant"
 
@@ -180,7 +181,7 @@ else:
                         f"##### Counsel@PCU-Bot - {st.session_state.chatbot.llm}"
                     )
                 with col2:
-                    st.markdown(time.strftime("%Y/%m/%d %H:%M:%S"))
+                    st.markdown(datetime.now(timezone.utc).astimezone(tz).strftime('%Y/%m/%d %H:%M:%S'))
 
             response_generator = st.session_state.chatbot.stream_response_generator(
                 messages[-1]["content"]
@@ -190,7 +191,7 @@ else:
             new_assistant_message = {
                 "role": "assistant",
                 "content": response_content,
-                "time": time.strftime("%Y/%m/%d %H:%M:%S"),
+                "time": datetime.now(timezone.utc).astimezone(tz).strftime('%Y/%m/%d %H:%M:%S'),
             }
             chat_session.chat(
                 new_assistant_message
@@ -200,4 +201,6 @@ else:
             end_time = time.time()
             total_time = end_time - st.session_state.start_time
             print(f"Total Response Latency: {total_time:.2f} sec\n")
+            with open(LOG_FILE, "a") as f:
+                f.write(f"Total Response Time:;{total_time:.4f};seconds;username;{st.session_state.user["username"]}\n")
             st.rerun()

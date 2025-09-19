@@ -11,7 +11,7 @@ metadata:
   name: ollama-model-custom-hpa-role
 rules:
   - apiGroups: ["apps"]
-    resources: ["deployments", "deployments/scale"]
+    resources: ["statefulsets", "statefulsets/scale"]
     verbs: ["get", "list", "watch", "update", "patch"]
   - apiGroups: [""]
     resources: ["pods"]

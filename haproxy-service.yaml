@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: haproxy-service
+  namespace: remmanuel
+spec:
+  type: ClusterIP
+  selector:
+    app: haproxy
+  ports:
+    - name: ollama-http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+    - name: qdrant-tcp
+      protocol: TCP
+      port: 6333
+      targetPort: 6333
+    - name: mongo-tcp
+      protocol: TCP
+      port: 27017
+      targetPort: 27017
+    - name: stats
+      protocol: TCP
+      port: 1936
+      targetPort: 1936

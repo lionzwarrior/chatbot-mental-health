@@ -1,4 +1,5 @@
 import streamlit as st
+import ollama
 
 from llama_index.llms.ollama import Ollama
 from llama_index.core.llms import ChatMessage
@@ -24,9 +25,26 @@ from tenacity import (
 )
 from utils.metrics import observe_chatbot_response_time
 
+def get_first_available_model():
+    try:
+        client = ollama.Client(host=st.secrets["ollama"]["url"])
+        model_list = client.list()["models"]
+        
+        if model_list:
+            first_model_name = model_list[0]["model"]
+            print(f"✅ Found available Ollama model. Setting default to: {first_model_name}")
+            return first_model_name
+        else:
+            print("⚠️ Ollama is running, but no models were found.")
+            return None
+    except Exception as e:
+        print(f"❌ Could not connect to Ollama to list models: {e}")
+        return None
+
+
 conn = Connection()
 cookies = get_cookies()
-MAX_CONTEXT_TOKENS = 1126
+LOG_FILE = "time_to_first_token_response_time.log"
 
 CONTEXT_PROMPT = """You are a christian counseling chatbot for Petra Christian University, able to have normal interactions, 
                 and knowledgeable in mental health issue. Context information is below.
@@ -41,7 +59,17 @@ CONTEXT_PROMPT = """You are a christian counseling chatbot for Petra Christian U
                 Telepon/WA: +62 895-2330-5960 and Website https://pkpp.petra.ac.id/"""
 
 if "chatbot" not in cookies or not cookies["chatbot"]:
-    cookies["chatbot"] = "llama3.1:latest"
+    default_model = get_first_available_model()
+    if not default_model:
+        st.error(
+            "**Could not connect to Ollama or no models found.**\n\n"
+            "Please make sure the Ollama application is running and you have pulled a model "
+            "(e.g., `ollama pull llama3`)."
+        )
+        st.stop()
+    else:
+        cookies["chatbot"] = default_model
+
 
 if "embedding" not in cookies or not cookies["embedding"]:
     cookies["embedding"] = "intfloat/multilingual-e5-large"
@@ -133,26 +161,19 @@ class Chatbot:
         return client, index
 
     def set_chat_history(self, messages):
-        total_tokens = 0
-        trimmed = []
-
-        for msg in reversed(messages):
-            tokens = int(len(msg["content"].split()) * 1.3)
-            if total_tokens + tokens > MAX_CONTEXT_TOKENS:
-                break
-            trimmed.append(msg)
-            total_tokens += tokens
-
-        trimmed.reverse()
-
         self.chat_history = [
-            ChatMessage(role=msg["role"], content=msg["content"]) for msg in trimmed
+            ChatMessage(role=msg["role"], content=msg["content"]) for msg in messages
         ]
         self.chat_store.store = {"chat_history": self.chat_history}
+        self.memory.set(self.chat_history)
+
 
     def create_chat_engine(self, index):
+        num_ctx = self.Settings.llm.metadata.context_window
+        memory_token_limit = int(num_ctx * 0.45)
+        print("MEMORY TOKEN LIMIT: " + str(memory_token_limit))
         self.chat_store = SimpleChatStore()
-        self.memory = ChatMemoryBuffer.from_defaults(chat_store=self.chat_store)
+        self.memory = ChatMemoryBuffer.from_defaults(chat_store=self.chat_store, token_limit=memory_token_limit)
         return index.as_chat_engine(
             chat_mode="condense_plus_context",
             chat_store_key="chat_history",
@@ -252,7 +273,9 @@ class Chatbot:
             end_time = time.time()
             elapsed_time = end_time - start_time
             observe_chatbot_response_time(elapsed_time, model_name=cookies["chatbot"])
-            print(f"Response Time: {elapsed_time:.4f} seconds (including retries)\n")
+            print(f"Time to First Token Response Time: {elapsed_time:.4f} seconds")
+            with open(LOG_FILE, "a") as f:
+                f.write(f"Time to First Token Response Time:;{elapsed_time:.4f};seconds;username;{st.session_state.user["username"]}\n")
 
             for token in response.response_gen:
                 yield token + ""

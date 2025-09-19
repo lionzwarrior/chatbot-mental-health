@@ -31,11 +31,11 @@ spec:
           protocol: TCP
         env:
         - name: MONGO_URI
-          value: "mongodb://mongodb-service:27017"
+          value: "mongodb://mongodb-headless-service:27017"
         - name: QDRANT_URL
-          value: "http://qdrant-service:6333"
+          value: "http://qdrant-headless-service:6333"
         - name: OLLAMA_URL
-          value: "http://ollama-model-service:11434"
+          value: "http://ollama-model-headless-service:11434"
         resources:
             requests:
               cpu: "4"

@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: chatbot
-        image: lionzwarrior10/chatbot-mental-health-old:latest
+        image: lionzwarrior10/chatbot-mental-health:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8501
@@ -31,11 +31,11 @@ spec:
           protocol: TCP
         env:
         - name: MONGO_URI
-          value: "mongodb://mongodb-service:27017"
+          value: "mongodb://haproxy-service.remmanuel.svc.cluster.pakcarik:27017"
         - name: QDRANT_URL
-          value: "http://qdrant-service:6333"
+          value: "http://haproxy-service.remmanuel.svc.cluster.pakcarik:6333"
         - name: OLLAMA_URL
-          value: "http://ollama-model-service:11434"
+          value: "http://haproxy-service.remmanuel.svc.cluster.pakcarik:8080"
         resources:
             requests:
               cpu: "4"

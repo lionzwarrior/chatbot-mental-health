@@ -13,8 +13,35 @@ spec:
       labels:
         app: ollama-model-custom-hpa
     spec:
-      serviceAccountName: ollama-model-custom-hpa
+      serviceAccountName: ollama-model-custom-hpa-sa
       containers:
         - name: autoscaler
           image: lionzwarrior10/ollama-model-custom-hpa:latest
           imagePullPolicy: Always
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: STATEFULSET_NAME
+              value: "ollama-model"
+            - name: PROMETHEUS_SERVICE_NAME
+              value: "prometheus-operated"
+            - name: PROMETHEUS_PORT
+              value: "9090"
+            - name: MIN_REPLICAS
+              value: "3"
+            - name: MAX_REPLICAS
+              value: "6"
+            - name: SCALE_COOLDOWN_SECONDS
+              value: "180"
+            - name: CHECK_INTERVAL_SECONDS
+              value: "30"
+            - name: GPU_UTIL_HIGH_THRESHOLD
+              value: "70"
+            - name: GPU_UTIL_LOW_THRESHOLD
+              value: "40"
+            - name: GPU_MEM_HIGH_THRESHOLD
+              value: "85"
+            - name: GPU_MEM_LOW_THRESHOLD
+              value: "50"

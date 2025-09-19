@@ -4,9 +4,9 @@ metadata:
   name: mongodb-nas-pv-remmanuel
 spec:
   capacity:
-    storage: 100Gi
+    storage: 10Gi
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   nfs:
     path: /media/nfs-codex/hpc/public/remmanuel

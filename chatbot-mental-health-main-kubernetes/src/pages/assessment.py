@@ -54,12 +54,12 @@ else:
 
     # Initialize Chatbot
     # if "chatbot" not in st.session_state:
-    #     st.session_state.chatbot = Chatbot("openchat:latest")
+    #     st.session_state.chatbot = Chatbot(cookies["chatbot"])
     # else:
     #     setting = st.session_state.chatbot.get_setting()
     #     st.session_state.chatbot = Chatbot(setting["llm"], setting["embedding_model"], setting["vector_store"])
 
-    st.session_state.chatbot = Chatbot("openchat:latest")
+    st.session_state.chatbot = Chatbot(cookies["chatbot"])
     chatbot = st.session_state.chatbot
 
     # Initialize chat history

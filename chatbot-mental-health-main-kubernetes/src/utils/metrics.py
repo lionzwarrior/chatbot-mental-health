@@ -35,5 +35,5 @@ def start_metrics_server(port=8000):
                     print(f"Error starting metrics server: {e}")
 
 
-def observe_chatbot_response_time(duration, model_name="llama3.1:latest"):
-    CHATBOT_RESPONSE_TIME.labels(model_name=model_name).observe(duration)
+def observe_chatbot_response_time(duration, model_name):
+    CHATBOT_RESPONSE_TIME.labels(model_name).observe(duration)

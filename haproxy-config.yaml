@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: haproxy-config
+  namespace: remmanuel
+data:
+  haproxy.cfg: |
+    global
+    log stdout format raw local0
+
+    defaults
+        log     global
+        timeout connect 5000
+        timeout client  50000
+        timeout server  50000
+
+    resolvers k8s
+        nameserver kube-dns 10.233.0.3:53
+        resolve_retries       3
+        timeout resolve       1s
+        timeout retry         1s
+        hold valid            10s
+
+    frontend ollama_http_in
+        bind *:8080
+        mode http
+        default_backend ollama_servers
+
+    backend ollama_servers
+        mode http
+        balance leastconn
+        server-template ollama 6 ollama-model-headless-service.remmanuel.svc.cluster.pakcarik:11434 check resolvers k8s resolve-prefer ipv4 init-addr last,libc
+
+    frontend qdrant_tcp_in
+        bind *:6333
+        mode tcp
+        default_backend qdrant_servers
+
+    backend qdrant_servers
+        mode tcp
+        server qdrant-0 qdrant-headless-service.remmanuel.svc.cluster.pakcarik:6333 check
+
+    frontend mongodb_tcp_in
+        bind *:27017
+        mode tcp
+        default_backend mongodb_servers
+
+    backend mongodb_servers
+        mode tcp
+        server mongo-0 mongodb-headless-service.remmanuel.svc.cluster.pakcarik:27017 check
+
+    listen stats
+        bind *:1936
+        mode http
+        stats enable
+        stats uri /
+        stats refresh 10s

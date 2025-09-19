@@ -12,7 +12,9 @@ kubectl apply -f curl-pod.yaml
 
 kubectl get pods curl-pod
 
-kubectl exec -it curl-pod -- curl -X POST http://ollama-model-service.remmanuel.svc.cluster.pakcarik:11434/api/generate -d '{ "model": "llama3.1:latest", "prompt": "Say hi." }'  
+kubectl exec -it curl-pod -- curl -X POST http://haproxy-service:8080/api/generate -d '{ "model": "llama3:8b", "prompt": "Say hi." }'
+
+kubectl exec -it curl-pod -- curl -X POST http://ollama-model-headless-service:11434/api/generate -d '{ "model": "llama3:8b", "prompt": "Say hi." }' 
 
 kubectl delete -f curl-pod.yaml
 
@@ -22,7 +24,7 @@ kubectl get namespace gpu-operator -o json | jq '.spec.finalizers = []' | kubect
 
 
 ## Force delete a pod
-kubectl delete pod ollama-model-deployment-94d78f948-2g469 --force --grace-period=0
+kubectl delete pod haproxy-65774767b6-4snfq --force --grace-period=0
 
 
 ## PV + PVC & Mongodb + Qdrant
@@ -147,10 +149,30 @@ docker build -t lionzwarrior10/ollama-model-custom-hpa .
 docker push lionzwarrior10/ollama-model-custom-hpa
 
 
+## Docker build custom-ollama
+docker build -t lionzwarrior10/custom-ollama .
+
+docker push lionzwarrior10/custom-ollama
+
+
 ## Deploy ollama-model-custom-hpa
 kubectl apply -f ollama-model-custom-hpa-rbac.yaml
 
 kubectl apply -f ollama-model-custom-hpa-deployment.yaml
+
+
+## Deploy Chatbot custom-ollama
+kubectl apply -f ollama-model-deployment-custom.yaml
+
+kubectl apply -f ollama-model-service.yaml
+
+kubectl apply -f ollama-model-headless-service.yaml
+
+
+## Deploy Chatbot Mental Heatlh
+kubectl apply -f chatbot-mental-health-haproxy-deployment.yaml
+
+kubectl apply -f chatbot-mental-health-service.yaml
 
 
 ## Kubectl port forwarding
@@ -160,20 +182,22 @@ kubectl port-forward svc/prometheus-kube-prometheus-prometheus 9090:9090
 
 kubectl port-forward svc/ollama-model-service 11434:11434
 
-kubectl port-forward svc/ollama-openchat-service 11435:11434
-
 kubectl port-forward svc/mongodb-service 27017:27017
 
-kubectl port-forward svc/qdrant-service 6333:6333
+kubectl port-forward svc/qdrant-headless-service 6333:6333
 
 kubectl port-forward svc/chatbot-mental-health-service 8501:80
 
-kubectl port-forward svc/prometheus-grafana 3000:80 & kubectl port-forward svc/prometheus-kube-prometheus-prometheus 9090:9090 & kubectl port-forward svc/ollama-model-service 11434:11434 & kubectl port-forward svc/mongodb-service 27017:27017 & kubectl port-forward svc/qdrant-service 6333:6333 & kubectl port-forward svc/chatbot-mental-health-service 8501:80
+ssh -L 3000:127.0.0.1:3000 raphael@pakcarik.petra.ac.id
 
-ssh -L 27017:127.0.0.1:27017 -L 6333:127.0.0.1:6333 -L 11434:127.0.0.1:11434 -L 27017:127.0.0.1:27017 -L 6333:127.0.0.1:6333 -L 8501:127.0.0.1:8501 -L 3000:127.0.0.1:3000 -L 9090:127.0.0.1:9090  raphael@pakcarik.petra.ac.id
-
+ssh -L 6333:127.0.0.1:6333 raphael@pakcarik.petra.ac.id
 
 # Delete process after stopping port forwarding
 ps aux | grep "kubectl port-forward" | grep -v grep
 
 kill 887043
+
+# Copy a file from a pod
+kubectl cp chatbot-mental-health-789d6db6-n5xdm:/app/time_to_first_token_response_time.log ./time_to_first_token_response_time.log
+kubectl cp chatbot-mental-health-789d6db6-n5xdm:/app/total_response_time.log ./total_response_time.log
+

@@ -11,7 +11,7 @@ class ChatSession:
         if len(args) > 1:
             self._id = ""
             self.user = args[0]
-            self.creation_time = datetime.now().astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')
+            self.creation_time = datetime.now(timezone.utc).astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')
             self.chatbot = args[1].get_setting()
             self.title = self.creation_time
             self.insert_to_db()
@@ -60,7 +60,7 @@ class ChatMessage():
         self.chat_session_id = chat_session_id
         self.role = role
         self.content = content
-        self.time = datetime.now().astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')
+        self.time = datetime.now(timezone.utc).astimezone(tz).strftime('%Y/%m/%d %H:%M:%S')
         self.insert_to_db()
 
     def insert_to_db(self):

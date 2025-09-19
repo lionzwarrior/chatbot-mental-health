@@ -3,7 +3,6 @@ from utils.sidebar import build_sidebar
 from core.chatbot import Chatbot
 import datetime
 
-
 # Main Program
 st.session_state.user={"username": "test", "role": "admin", "assessment": ""}
 st.session_state.chatbot=Chatbot()
