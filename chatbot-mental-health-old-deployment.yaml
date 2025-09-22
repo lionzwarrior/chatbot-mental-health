@@ -36,11 +36,3 @@ spec:
           value: "http://qdrant-headless-service:6333"
         - name: OLLAMA_URL
           value: "http://ollama-model-headless-service:11434"
-        resources:
-            requests:
-              cpu: "4"
-              memory: "8Gi"
-            limits:
-              cpu: "8"
-              memory: "16Gi"
-

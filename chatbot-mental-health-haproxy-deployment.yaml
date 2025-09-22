@@ -5,7 +5,7 @@ metadata:
   labels:
     app: chatbot-mental-health
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: chatbot-mental-health
@@ -36,11 +36,3 @@ spec:
           value: "http://haproxy-service.remmanuel.svc.cluster.pakcarik:6333"
         - name: OLLAMA_URL
           value: "http://haproxy-service.remmanuel.svc.cluster.pakcarik:8080"
-        resources:
-            requests:
-              cpu: "4"
-              memory: "8Gi"
-            limits:
-              cpu: "8"
-              memory: "16Gi"
-
