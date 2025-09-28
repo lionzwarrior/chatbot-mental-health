@@ -16,6 +16,9 @@ kubectl exec -it curl-pod -- curl -X POST http://haproxy-service:8080/api/genera
 
 kubectl exec -it curl-pod -- curl -X POST http://ollama-model-headless-service:11434/api/generate -d '{ "model": "llama3:8b", "prompt": "Say hi." }' 
 
+kubectl exec -it curl-pod -- curl -X POST -g 'http://prometheus-kube-prometheus-prometheus.remmanuel.svc.cluster.pakcarik:9090/api/v1/admin/tsdb/delete_series?match[]={__name__="chatbot_requests_total"}'
+
+
 kubectl delete -f curl-pod.yaml
 
 
@@ -56,7 +59,15 @@ helm repo add prometheus-community https://prometheus-community.github.io/helm-c
 
 helm repo update
 
-helm install prometheus prometheus-community/kube-prometheus-stack --namespace remmanuel --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false --set grafana.enabled=true
+helm show values prometheus-community/kube-prometheus-stack > values.yaml
+
+nano values.yaml
+
+enableAdminAPI = false -> true
+
+serviceMonitorSelectorNilUsesHelmValues = true -> false
+
+helm install prometheus prometheus-community/kube-prometheus-stack --namespace remmanuel -f values.yaml
 
 
 ## Nvidia container toolkit
@@ -137,6 +148,17 @@ password: prom-operator
 docker login
 
 
+## Setup Cookie
+kubectl create secret generic cookie-secret --from-literal=encryption-password='r3mm4nu312025!'
+
+
+## Docker build Chatbot Mental Heatlh Old
+
+docker build -t lionzwarrior10/chatbot-mental-health-old:latest .
+
+docker push lionzwarrior10/chatbot-mental-health-old:latest
+
+
 ## Docker build Chatbot Mental Heatlh
 docker build -t lionzwarrior10/chatbot-mental-health:latest .
 
@@ -192,6 +214,10 @@ ssh -L 3000:127.0.0.1:3000 raphael@pakcarik.petra.ac.id
 
 ssh -L 6333:127.0.0.1:6333 raphael@pakcarik.petra.ac.id
 
+ssh -L 9090:127.0.0.1:9090 raphael@pakcarik.petra.ac.id
+
+ssh -L 3000:127.0.0.1:3000 -L 9090:127.0.0.1:9090 raphael@pakcarik.petra.ac.id
+
 # Delete process after stopping port forwarding
 ps aux | grep "kubectl port-forward" | grep -v grep
 
@@ -201,3 +227,5 @@ kill 887043
 kubectl cp chatbot-mental-health-789d6db6-n5xdm:/app/time_to_first_token_response_time.log ./time_to_first_token_response_time.log
 kubectl cp chatbot-mental-health-789d6db6-n5xdm:/app/total_response_time.log ./total_response_time.log
 
+## Reset counter
+curl -X POST -g 'http://prometheus-kube-prometheus-prometheus.remmanuel.svc.cluster.pakcarik:9090/api/v1/admin/tsdb/delete_series?match[]={__name__="chatbot_requests_total"}'

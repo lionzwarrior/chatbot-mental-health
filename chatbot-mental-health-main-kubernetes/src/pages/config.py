@@ -1,23 +1,32 @@
+import json
+import os
 import streamlit as st
-from utils.sidebar import build_sidebar
-from utils.utils import get_cookies
-from core.chatbot import Chatbot
 import time
 import ollama
+from streamlit_cookies_manager import EncryptedCookieManager
 
-cookies = get_cookies()
+from utils.sidebar import build_sidebar
+from core.chatbot import Chatbot
+
+secret = os.getenv("COOKIE_SECRET", "your_very_secret_key")
+cookies = EncryptedCookieManager(password=secret)
+
+if not cookies.ready():
+    st.stop()
 
 # Main Program
 if "user" not in cookies or not cookies["user"]:
     st.switch_page("pages/authentication.py")
 else:
+    if "user" not in st.session_state:
+        st.session_state.user = json.loads(cookies["user"])
     # Connect ollama to docker
     ollama_client = ollama.Client(host=st.secrets["ollama"]["url"])
     
     st.title("Configuration")
     
     # Sidebar
-    build_sidebar()
+    build_sidebar(cookies)
 
     if "chatbot" not in st.session_state:
         # st.warning("Please configure your chatbot first!")
@@ -52,7 +61,8 @@ else:
             cookies["chatbot"] = model
             cookies["embedding"] = embedding
             cookies["vector_store"] = vector_store
-            st.session_state.chatbot = Chatbot(model, embedding, vector_store)
+            cookies.save()
+            st.session_state.chatbot = Chatbot(model, embedding, vector_store, user_id=st.session_state.user["_id"])
             st.success("Successfully configuring chatbot!!!")
             time.sleep(3)
             st.switch_page("app.py")

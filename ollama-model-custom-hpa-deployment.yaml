@@ -45,3 +45,10 @@ spec:
               value: "85"
             - name: GPU_MEM_LOW_THRESHOLD
               value: "50"
+          resources:
+            requests:
+              cpu: "4000m"
+              memory: "8Gi"
+            limits:
+              cpu: "8000m"
+              memory: "16Gi"

@@ -23,16 +23,39 @@ spec:
         image: lionzwarrior10/chatbot-mental-health:latest
         imagePullPolicy: Always
         ports:
-        - containerPort: 8501
+        - containerPort: 8080
           name: streamlit-http
           protocol: TCP
         - containerPort: 8000
           name: metrics-http
           protocol: TCP
         env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         - name: MONGO_URI
           value: "mongodb://haproxy-service.remmanuel.svc.cluster.pakcarik:27017"
         - name: QDRANT_URL
           value: "http://haproxy-service.remmanuel.svc.cluster.pakcarik:6333"
         - name: OLLAMA_URL
           value: "http://haproxy-service.remmanuel.svc.cluster.pakcarik:8080"
+        - name: COOKIE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: cookie-secret
+              key: encryption-password
+        resources:
+          requests:
+            memory: "8Gi"
+            cpu: "4000m"
+          limits:
+            memory: "16Gi"
+            cpu: "8000m"
+        readinessProbe:
+            httpGet:
+              path: /chatbot-mental-health/_stcore/health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+

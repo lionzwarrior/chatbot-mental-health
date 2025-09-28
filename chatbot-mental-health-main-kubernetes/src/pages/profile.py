@@ -1,19 +1,25 @@
+import os
 import streamlit as st
 import time
 import ollama
 import json
 
+from streamlit_cookies_manager import EncryptedCookieManager
+
 from core.chatbot import Chatbot
 from utils.sidebar import build_sidebar
-from pages.authentication import hash_pass, validate_pass
 from core.connection import Connection
-from utils.utils import get_cookies
 from bson import ObjectId
-
 from streamlit_modal import Modal
+from utils.utils import hash_pass, validate_pass
+
+secret = os.getenv("COOKIE_SECRET", "your_very_secret_key")
+cookies = EncryptedCookieManager(password=secret)
+
+if not cookies.ready():
+    st.stop()
 
 conn = Connection()
-cookies = get_cookies()
 
 def update_pass(password, filter):
     new_pass = hash_pass(password)
@@ -28,7 +34,10 @@ def change_password():
         submitted = st.button("Save")
 
     if submitted:
-        if validate_pass(current_pass.strip(), conn.find_user({"_id": ObjectId(st.session_state.user["_id"])})["password"]):
+        if validate_pass(
+            current_pass.strip(),
+            conn.find_user({"_id": ObjectId(st.session_state.user["_id"])})["password"],
+        ):
             if new_pass.strip() != match_pass.strip():
                 st.error("New password don't match each other, check your input!")
             elif " " in new_pass.strip():
@@ -59,13 +68,15 @@ def account_profile():
     change_password()
 
     st.header("Assesment")
-    if conn.find_user({"_id": ObjectId(st.session_state.user["_id"])})["assessment"] == "":
+    if (
+        conn.find_user({"_id": ObjectId(st.session_state.user["_id"])})["assessment"]
+        == ""
+    ):
         st.write("```No assessment yet```")
         assessment_button = st.button("Take Assessment 📝")
     else:
         assessment = st.session_state.user["assessment"]
-        keys = ["Current emotional state", "Cause",
-                "Symptoms", "Coping strategies"]
+        keys = ["Current emotional state", "Cause", "Symptoms", "Coping strategies"]
         for i, key in enumerate(assessment):
             with st.container():
                 col1, col2 = st.columns(2)
@@ -83,8 +94,12 @@ def account_profile():
 def chat_management():
     st.header("Chat Session List")
     delete_button = []
-    session_list = [session for session in conn.retrieve_user_chat_sessions(
-        st.session_state.user["username"])]
+    session_list = [
+        session
+        for session in conn.retrieve_user_chat_sessions(
+            st.session_state.user["username"]
+        )
+    ]
     st.warning("Changes will take effect immediately!")
     if len(session_list) > 0:
         for i, session in enumerate(session_list):
@@ -95,7 +110,7 @@ def chat_management():
                 with col2:
                     st.write(session["creation_time"])
                 with col3:
-                    delete = st.button("Delete", key="delete"+str(i))
+                    delete = st.button("Delete", key="delete" + str(i))
                     delete_button.append(delete)
     else:
         st.write("`No Chat Session Yet`")
@@ -103,9 +118,12 @@ def chat_management():
     if True in delete_button:
         index = delete_button.index(True)
         conn.delete_chat_session(
-            {"_id": session_list[index]["_id"], "user": st.session_state.user["username"]})
-        st.toast(
-            f"Successfully deleted {session_list[index]['title']}", icon="❌")
+            {
+                "_id": session_list[index]["_id"],
+                "user": st.session_state.user["username"],
+            }
+        )
+        st.toast(f"Successfully deleted {session_list[index]['title']}", icon="❌")
         del session_list[index]
         st.rerun()
 
@@ -133,23 +151,24 @@ def user_management():
                 if x["username"] == st.session_state.user["username"]:
                     disable = True
 
-                role = st.selectbox(label="role",
-                                    options=[
-                                        x["role"]] + [role for role in roles if role != x["role"]],
-                                    label_visibility="hidden", disabled=disable,
-                                    key=i)
+                role = st.selectbox(
+                    label="role",
+                    options=[x["role"]] + [role for role in roles if role != x["role"]],
+                    label_visibility="hidden",
+                    disabled=disable,
+                    key=i,
+                )
                 user_role[x["username"]] = role
             with col4:
                 subcol1, subcol2 = st.columns(2)
                 with subcol1:
-                    detail = st.button("🛈", key="details"+str(i))
+                    detail = st.button("🛈", key="details" + str(i))
                     detail_button.append(detail)
                 with subcol2:
-                    delete = st.button("🗑️", key="deletes"+str(i))
+                    delete = st.button("🗑️", key="deletes" + str(i))
                     delete_button.append(delete)
 
-    modal = Modal(key="detailModal", title="User Details",
-                  padding=25, max_width=500)
+    modal = Modal(key="detailModal", title="User Details", padding=25, max_width=500)
     if True in detail_button:
         i = detail_button.index(True)
         with modal.container():
@@ -167,9 +186,11 @@ def user_management():
         user = user_list[i]
         if user["role"] != "admin":
             print(user)
-            filter = {"_id": user["_id"],
-                      "username": user["username"],
-                      "email": user["email"]}
+            filter = {
+                "_id": user["_id"],
+                "username": user["username"],
+                "email": user["email"],
+            }
             conn.delete_user(filter)
             st.rerun()
         else:
@@ -214,28 +235,25 @@ def config():
     else:
         chatbot = st.session_state.chatbot
         current_settings = {
-            "model": chatbot.llm, "embedding": chatbot.embedding_model, "vector_store": chatbot.vector_store}
+            "model": chatbot.llm,
+            "embedding": chatbot.embedding_model,
+            "vector_store": chatbot.vector_store,
+        }
         print(current_settings)
 
         models = [i for i in ollama_client.list().get("models")]
         model = st.selectbox(
-                    "Model:",
-                    [current_settings["model"]] + [
-                        m.model for m in models if m.model != current_settings["model"]
-                    ],
-                    key="model"
-                )
+            "Model:",
+            [current_settings["model"]]
+            + [m.model for m in models if m.model != current_settings["model"]],
+            key="model",
+        )
 
+        embedding = st.selectbox(
+            "Embedding Model:", ["intfloat/multilingual-e5-large"], key="embedding"
+        )
 
-        embedding = st.selectbox("Embedding Model:",
-                                 ["intfloat/multilingual-e5-large"],
-                                 key="embedding"
-                                 )
-
-        vector_store = st.selectbox("Vector Store:",
-                                    ["Qdrant"],
-                                    key="vector_store"
-                                    )
+        vector_store = st.selectbox("Vector Store:", ["Qdrant"], key="vector_store")
 
         save_button = st.button("Save Configuration")
 
@@ -243,7 +261,8 @@ def config():
             cookies["chatbot"] = model
             cookies["embedding"] = embedding
             cookies["vector_store"] = vector_store
-            st.session_state.chatbot = Chatbot(model, embedding, vector_store)
+            cookies.save()
+            st.session_state.chatbot = Chatbot(model, embedding, vector_store, user_id=st.session_state.user["_id"])
             st.success("Successfully configuring chatbot!!!")
             time.sleep(3)
             st.switch_page("app.py")
@@ -293,12 +312,14 @@ st.markdown(
 if "user" not in cookies or not cookies["user"]:
     st.switch_page("pages/authentication.py")
 else:
-    st.session_state.user = json.loads(cookies["user"])
-    build_sidebar()
+    if "user" not in st.session_state:
+        st.session_state.user = json.loads(cookies["user"])
+    build_sidebar(cookies)
 
     if st.session_state.user["role"] == "admin":
         tab1, tab2, tab3, tab4 = st.tabs(
-            ["Profile", "Chat Management", "User Management", "Admin Panel"])
+            ["Profile", "Chat Management", "User Management", "Admin Panel"]
+        )
         with tab1:
             account_profile()
         with tab2:
@@ -308,8 +329,7 @@ else:
         with tab4:
             settings_panel()
     else:
-        tab1, tab2, tab3 = st.tabs(
-            ["Profile", "Chat Management", "User Panel"])
+        tab1, tab2, tab3 = st.tabs(["Profile", "Chat Management", "User Panel"])
         with tab1:
             account_profile()
         with tab2:

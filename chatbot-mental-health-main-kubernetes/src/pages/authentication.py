@@ -1,36 +1,21 @@
+import os
 import streamlit as st
-import re
-import bcrypt
 import json
+
+from streamlit_cookies_manager import EncryptedCookieManager
 
 st.set_page_config(initial_sidebar_state="collapsed")
 
 from core.connection import Connection
-from utils.utils import get_cookies
+from utils.utils import hash_pass, validate_pass, validate_email
 
-def validate_email(email):
-    regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
-    if(re.fullmatch(regex, email)):
-        return True
-    else:
-        return False
+secret = os.getenv("COOKIE_SECRET", "your_very_secret_key")
+cookies = EncryptedCookieManager(password=secret)
 
-
-def hash_pass(password):
-    # Adding the salt to password
-    salt = bcrypt.gensalt()
-    
-    # Hashing the password
-    hashed = bcrypt.hashpw(password.encode(), salt)
-    return hashed.decode()
-
-
-def validate_pass(input, password):
-    return bcrypt.checkpw(input.encode(), password.encode())
-
+if not cookies.ready():
+    st.stop()
 
 conn = Connection()
-cookies = get_cookies()
 
 # Styling
 st.markdown(
@@ -77,7 +62,7 @@ with tab1:
     with login_form:
         username = st.text_input("Username: ")
         password = st.text_input("Password: ", type="password")
-    
+
         # Every form must have a submit button.
         submitted = st.form_submit_button("Login")
         if submitted:
@@ -89,11 +74,14 @@ with tab1:
                 if user_data:
                     user_pass = conn.find_user({"username": username})["password"]
                     if validate_pass(password, user_pass):
-                        cookies["user"] = json.dumps({
-                            "_id": str(user_data["_id"]),
-                            "username": user_data["username"],
-                            "role": user_data["role"]
-                        })
+                        cookies["user"] = json.dumps(
+                            {
+                                "_id": str(user_data["_id"]),
+                                "username": user_data["username"],
+                                "role": user_data["role"],
+                            }
+                        )
+                        cookies.save()
                         st.session_state.user = json.loads(cookies["user"])
                         st.switch_page("app.py")
                     else:
@@ -110,24 +98,38 @@ with tab2:
         with col1:
             new_password = st.text_input("New Password: ", type="password")
         with col2:
-            new_match_password = st.text_input("Re-type New Password: ", type="password")
-        checkbox = st.checkbox("With this, you're confirming that the data you use to create the account is valid")
+            new_match_password = st.text_input(
+                "Re-type New Password: ", type="password"
+            )
+        checkbox = st.checkbox(
+            "With this, you're confirming that the data you use to create the account is valid"
+        )
 
         # Every form must have a submit button.
         submitted = st.form_submit_button("Sign Up")
         if submitted:
             # Remove trailing spaces
-            input = {"new_email": new_email.strip(),
-                     "new_username": new_username.strip(),
-                     "new_password": new_password.strip(),
-                     "new_match_password": new_match_password.strip()}
+            input = {
+                "new_email": new_email.strip(),
+                "new_username": new_username.strip(),
+                "new_password": new_password.strip(),
+                "new_match_password": new_match_password.strip(),
+            }
 
-            if input["new_email"] == "" or input["new_username"] == "" or input["new_password"] == "" or input["new_match_password"] == "" or not checkbox:
+            if (
+                input["new_email"] == ""
+                or input["new_username"] == ""
+                or input["new_password"] == ""
+                or input["new_match_password"] == ""
+                or not checkbox
+            ):
                 st.warning("Fill all the form's field, including the checkbox")
             else:
                 if input["new_password"] != input["new_match_password"]:
                     st.error("Password don't match each other, check your input!")
-                elif conn.find_user({"email": input["new_email"]}) or conn.find_user({"username": input["new_username"]}):
+                elif conn.find_user({"email": input["new_email"]}) or conn.find_user(
+                    {"username": input["new_username"]}
+                ):
                     st.error("There's already an account with this username or email!")
                 else:
                     if not validate_email(input["new_email"]):
@@ -136,5 +138,7 @@ with tab2:
                         st.warning("Whitespace is not allowed!")
                     else:
                         new_password = hash_pass(input["new_password"])
-                        conn.insert_user(input["new_email"], input["new_username"], new_password)
+                        conn.insert_user(
+                            input["new_email"], input["new_username"], new_password
+                        )
                         st.success("Successfully created the account!")

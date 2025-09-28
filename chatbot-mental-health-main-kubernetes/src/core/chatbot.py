@@ -1,5 +1,6 @@
 import streamlit as st
 import ollama
+import time
 
 from llama_index.llms.ollama import Ollama
 from llama_index.core.llms import ChatMessage
@@ -8,13 +9,8 @@ from qdrant_client.http.exceptions import ResponseHandlingException
 from llama_index.core import VectorStoreIndex, Settings
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.embeddings.fastembed import FastEmbedEmbedding
-
 from llama_index.core.storage.chat_store import SimpleChatStore
 from llama_index.core.memory import ChatMemoryBuffer
-
-import time
-import json
-from utils.utils import get_cookies
 from bson import ObjectId
 from core.connection import Connection
 from tenacity import (
@@ -23,16 +19,17 @@ from tenacity import (
     wait_exponential,
     retry_if_exception_type,
 )
-from utils.metrics import observe_chatbot_response_time
 
 def get_first_available_model():
     try:
         client = ollama.Client(host=st.secrets["ollama"]["url"])
         model_list = client.list()["models"]
-        
+
         if model_list:
             first_model_name = model_list[0]["model"]
-            print(f"✅ Found available Ollama model. Setting default to: {first_model_name}")
+            print(
+                f"✅ Found available Ollama model. Setting default to: {first_model_name}"
+            )
             return first_model_name
         else:
             print("⚠️ Ollama is running, but no models were found.")
@@ -43,7 +40,6 @@ def get_first_available_model():
 
 
 conn = Connection()
-cookies = get_cookies()
 LOG_FILE = "time_to_first_token_response_time.log"
 
 CONTEXT_PROMPT = """You are a christian counseling chatbot for Petra Christian University, able to have normal interactions, 
@@ -58,44 +54,24 @@ CONTEXT_PROMPT = """You are a christian counseling chatbot for Petra Christian U
                 with operational hours: Senin - Jumat, 07.30 - 15.30 WIB. Also here is the contact information of 
                 Telepon/WA: +62 895-2330-5960 and Website https://pkpp.petra.ac.id/"""
 
-if "chatbot" not in cookies or not cookies["chatbot"]:
-    default_model = get_first_available_model()
-    if not default_model:
-        st.error(
-            "**Could not connect to Ollama or no models found.**\n\n"
-            "Please make sure the Ollama application is running and you have pulled a model "
-            "(e.g., `ollama pull llama3`)."
-        )
-        st.stop()
-    else:
-        cookies["chatbot"] = default_model
-
-
-if "embedding" not in cookies or not cookies["embedding"]:
-    cookies["embedding"] = "intfloat/multilingual-e5-large"
-
-if "vector_store" not in cookies or not cookies["vector_store"]:
-    cookies["vector_store"] = "Qdrant"
-
 
 class Chatbot:
-
     def __init__(
         self,
-        llm=cookies["chatbot"],
-        embedding_model=cookies["embedding"],
-        vector_store=cookies["vector_store"],
+        llm="llama3:8b",
+        embedding_model="intfloat/multilingual-e5-large",
+        vector_store="Qdrant", user_id=None,
     ):
         # Set user
-        if "user" in cookies:
-            st.session_state.user = json.loads(cookies["user"])
-
-        if conn.find_user({"_id": ObjectId(st.session_state.user["_id"])})[
-            "assessment"
-        ]:
-            self.user_assessment = conn.find_user(
-                {"_id": ObjectId(st.session_state.user["_id"])}
-            )["assessment"]
+        if user_id:
+            if conn.find_user({"_id": ObjectId(user_id)})[
+                "assessment"
+            ]:
+                self.user_assessment = conn.find_user(
+                    {"_id": ObjectId(user_id)}
+                )["assessment"]
+            else:
+                self.user_assessment = ""
         else:
             self.user_assessment = ""
 
@@ -124,7 +100,9 @@ class Chatbot:
             request_timeout=600,
         )
         Settings.embed_model = FastEmbedEmbedding(
-            model_name=self.embedding_model, cache_dir="../fastembed_cache", device="cpu"
+            model_name=self.embedding_model,
+            cache_dir="../fastembed_cache",
+            device="cpu",
         )
         Settings.system_prompt = f"""
             You are a religious CHRISTIAN expert system called Counsel@PCU-Bot whose role is to be a multi-lingual and experienced counselor
@@ -167,13 +145,14 @@ class Chatbot:
         self.chat_store.store = {"chat_history": self.chat_history}
         self.memory.set(self.chat_history)
 
-
     def create_chat_engine(self, index):
         num_ctx = self.Settings.llm.metadata.context_window
         memory_token_limit = int(num_ctx * 0.45)
         print("MEMORY TOKEN LIMIT: " + str(memory_token_limit))
         self.chat_store = SimpleChatStore()
-        self.memory = ChatMemoryBuffer.from_defaults(chat_store=self.chat_store, token_limit=memory_token_limit)
+        self.memory = ChatMemoryBuffer.from_defaults(
+            chat_store=self.chat_store, token_limit=memory_token_limit
+        )
         return index.as_chat_engine(
             chat_mode="condense_plus_context",
             chat_store_key="chat_history",
@@ -194,14 +173,8 @@ class Chatbot:
         print(f"Attempting chat_engine.chat for prompt: {prompt}")
         return self.chat_engine.chat(prompt)
 
-    def response_generator(self, prompt):
-        if "language" not in cookies or not cookies["language"]:
-            cookies["language"] = "IND"
-            st.session_state.language = "IND"
-        else:
-            st.session_state.language = cookies["language"]
-
-        if st.session_state.language == "IND":
+    def response_generator(self, prompt, language="IND"):
+        if language == "IND":
             language_prompt = ", jawab dalam bahasa Indonesia"
         else:
             language_prompt = ", answer in English language"
@@ -215,7 +188,6 @@ class Chatbot:
         response = self._call_chat_engine_chat_with_retries(prompt).response
         end_time = time.time()
         elapsed_time = end_time - start_time
-        observe_chatbot_response_time(elapsed_time, model_name=cookies["chatbot"])
         print(f"Response Time: {elapsed_time:.4f} seconds\n")
 
         return response
@@ -234,14 +206,8 @@ class Chatbot:
         print(f"Attempting chat_engine.stream_chat for prompt: {prompt}")
         return self.chat_engine.stream_chat(prompt)
 
-    def stream_response_generator(self, prompt):
-        if "language" not in cookies or not cookies["language"]:
-            cookies["language"] = "IND"
-            st.session_state.language = "IND"
-        else:
-            st.session_state.language = cookies["language"]
-
-        if st.session_state.language == "IND":
+    def stream_response_generator(self, prompt, language="IND"):
+        if language == "IND":
             language_prompt = ", jawab dalam bahasa Indonesia"
         else:
             language_prompt = ", answer in English language"
@@ -272,10 +238,11 @@ class Chatbot:
 
             end_time = time.time()
             elapsed_time = end_time - start_time
-            observe_chatbot_response_time(elapsed_time, model_name=cookies["chatbot"])
             print(f"Time to First Token Response Time: {elapsed_time:.4f} seconds")
             with open(LOG_FILE, "a") as f:
-                f.write(f"Time to First Token Response Time:;{elapsed_time:.4f};seconds;username;{st.session_state.user["username"]}\n")
+                f.write(
+                    f"Time to First Token Response Time:;{elapsed_time:.4f};seconds;username;{st.session_state.user["username"]}\n"
+                )
 
             for token in response.response_gen:
                 yield token + ""

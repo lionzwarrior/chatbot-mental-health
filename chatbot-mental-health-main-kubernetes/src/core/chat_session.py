@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from core.connection import Connection
 
-
 conn = Connection()
 tz = timezone(timedelta(hours=7))
 

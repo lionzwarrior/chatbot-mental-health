@@ -3,8 +3,9 @@ Chatbot Konseling Mental Health untuk PKPP UK Petra
 
 ## Set-up
 1. Create python virtual environment in the cloned project directory
-2. Install dependancies from `requirements.txt`
-3. Create `secrets.toml` inside `src/.streamlit` for credential management
+2. Install torch and torchvision from https://pytorch.org/get-started/locally/
+3. Install dependancies from `requirements.txt`
+4. Create `secrets.toml` inside `src/.streamlit` for credential management
 
 ## IMPORTANT
 For secrets management, see `secrets.toml` in LEAP GDrive to access personal cloud database of previous intern :v (untuk sementara).

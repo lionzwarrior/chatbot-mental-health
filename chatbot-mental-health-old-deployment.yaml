@@ -23,7 +23,7 @@ spec:
         image: lionzwarrior10/chatbot-mental-health-old:latest
         imagePullPolicy: Always
         ports:
-        - containerPort: 8501
+        - containerPort: 8080
           name: streamlit-http
           protocol: TCP
         - containerPort: 8000
@@ -36,3 +36,8 @@ spec:
           value: "http://qdrant-headless-service:6333"
         - name: OLLAMA_URL
           value: "http://ollama-model-headless-service:11434"
+        - name: COOKIE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: cookie-secret
+              key: encryption-password

@@ -1,16 +1,22 @@
+import os
 import streamlit as st
 import time
 import json
+
 from datetime import datetime, timedelta, timezone
 
-try:
-    from utils.sidebar import build_sidebar
-    from core.chatbot import Chatbot, get_first_available_model
-    from core.chat_session import ChatSession
-    from utils.utils import get_cookies
-except ImportError as e:
-    st.error(f"Error importing custom modules: {e}")
+from streamlit_cookies_manager import EncryptedCookieManager
+from utils.sidebar import build_sidebar
+from core.chatbot import Chatbot, get_first_available_model
+from core.chat_session import ChatSession
+from utils.metrics import inc_concurrent_requests, dec_concurrent_requests
+
+secret = os.getenv("COOKIE_SECRET", "your_very_secret_key")
+cookies = EncryptedCookieManager(password=secret)
+
+if not cookies.ready():
     st.stop()
+
 
 st.markdown(
     """
@@ -36,7 +42,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-cookies = get_cookies()
 tz = timezone(timedelta(hours=7))
 LOG_FILE = "total_response_time.log"
 
@@ -51,22 +56,39 @@ else:
         llm_model: str, embedding_model: str, vector_store: str
     ):
         return Chatbot(
-            llm=llm_model, embedding_model=embedding_model, vector_store=vector_store
+            llm=llm_model, embedding_model=embedding_model, vector_store=vector_store, user_id=st.session_state.user["_id"]
         )
 
+    build_sidebar(cookies)
+    
     if "chatbot" not in st.session_state:
-        try:
-            initial_chatbot_config = cookies["chatbot"]
-            initial_embedding_config = cookies["embedding"]
-            initial_vector_store_config = cookies["vector_store"]
-            st.session_state.chatbot = load_global_chatbot_instance(
-                initial_chatbot_config, initial_embedding_config, initial_vector_store_config
-            )
-        except (json.JSONDecodeError, KeyError) as e:
-            st.error(f"Error loading initial chatbot configuration from cookies: {e}")
-            st.stop()
+        if (
+            ("chatbot" in cookies and cookies["chatbot"])
+            and ("embedding" in cookies and cookies["embedding"])
+            and ("vector_store" in cookies and cookies["vector_store"])
+        ):
+            try:
+                initial_chatbot_config = cookies["chatbot"]
+                initial_embedding_config = cookies["embedding"]
+                initial_vector_store_config = cookies["vector_store"]
+                st.session_state.chatbot = load_global_chatbot_instance(
+                    initial_chatbot_config,
+                    initial_embedding_config,
+                    initial_vector_store_config
+                )
+            except (json.JSONDecodeError, KeyError) as e:
+                st.error(
+                    f"Error loading initial chatbot configuration from cookies: {e}"
+                )
+                st.stop()
+        else:
+            default_llm = get_first_available_model()
+            default_embedding_model = "intfloat/multilingual-e5-large"
+            default_vector_store = "Qdrant"
 
-    build_sidebar()
+            st.session_state.chatbot = load_global_chatbot_instance(
+                default_llm, default_embedding_model, default_vector_store
+            )
 
     if "chat_session" not in st.session_state:
         st.session_state.chat_session = ChatSession(
@@ -83,14 +105,18 @@ else:
     else:
         if "chatbot" not in st.session_state:
             if (
-                ("chatbot" in cookies and cookies["chatbot"]) and ("embedding" in cookies and cookies["embedding"]) and ("vector_store" in cookies and cookies["vector_store"]) 
+                ("chatbot" in cookies and cookies["chatbot"])
+                and ("embedding" in cookies and cookies["embedding"])
+                and ("vector_store" in cookies and cookies["vector_store"])
             ):
                 try:
                     initial_chatbot_config = cookies["chatbot"]
                     initial_embedding_config = cookies["embedding"]
                     initial_vector_store_config = cookies["vector_store"]
                     st.session_state.chatbot = load_global_chatbot_instance(
-                        initial_chatbot_config, initial_embedding_config, initial_vector_store_config
+                        initial_chatbot_config,
+                        initial_embedding_config,
+                        initial_vector_store_config,
                     )
                 except (json.JSONDecodeError, KeyError) as e:
                     st.error(
@@ -117,9 +143,8 @@ else:
 
     if prompt:
         st.session_state.start_time = time.time()
-        chat_session.chat(
-            {"role": "user", "content": prompt}
-        )
+        inc_concurrent_requests()
+        chat_session.chat({"role": "user", "content": prompt})
         st.session_state.chat_input_disabled = True
         st.rerun()
 
@@ -181,7 +206,11 @@ else:
                         f"##### Counsel@PCU-Bot - {st.session_state.chatbot.llm}"
                     )
                 with col2:
-                    st.markdown(datetime.now(timezone.utc).astimezone(tz).strftime('%Y/%m/%d %H:%M:%S'))
+                    st.markdown(
+                        datetime.now(timezone.utc)
+                        .astimezone(tz)
+                        .strftime("%Y/%m/%d %H:%M:%S")
+                    )
 
             response_generator = st.session_state.chatbot.stream_response_generator(
                 messages[-1]["content"]
@@ -191,16 +220,19 @@ else:
             new_assistant_message = {
                 "role": "assistant",
                 "content": response_content,
-                "time": datetime.now(timezone.utc).astimezone(tz).strftime('%Y/%m/%d %H:%M:%S'),
+                "time": datetime.now(timezone.utc)
+                .astimezone(tz)
+                .strftime("%Y/%m/%d %H:%M:%S"),
             }
-            chat_session.chat(
-                new_assistant_message
-            )
+            chat_session.chat(new_assistant_message)
 
             st.session_state.chat_input_disabled = False
             end_time = time.time()
             total_time = end_time - st.session_state.start_time
+            dec_concurrent_requests()
             print(f"Total Response Latency: {total_time:.2f} sec\n")
             with open(LOG_FILE, "a") as f:
-                f.write(f"Total Response Time:;{total_time:.4f};seconds;username;{st.session_state.user["username"]}\n")
+                f.write(
+                    f"Total Response Time:;{total_time:.4f};seconds;username;{st.session_state.user["username"]}\n"
+                )
             st.rerun()

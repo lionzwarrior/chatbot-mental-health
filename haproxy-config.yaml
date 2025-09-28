@@ -10,16 +10,20 @@ data:
 
     defaults
         log     global
-        timeout connect 5000
-        timeout client  50000
-        timeout server  50000
+        timeout connect 10s
+        timeout client  300s
+        timeout server  300s
 
     resolvers k8s
         nameserver kube-dns 10.233.0.3:53
-        resolve_retries       3
-        timeout resolve       1s
-        timeout retry         1s
-        hold valid            10s
+        resolve_retries       5
+        timeout resolve       10s
+        timeout retry         15s
+        hold valid            5m
+        hold other            30s
+        hold refused          30s
+        hold nx               30s
+        hold timeout          30s
 
     frontend ollama_http_in
         bind *:8080

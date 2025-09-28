@@ -5,3 +5,10 @@ backgroundColor = "#FDFDFD"
 secondaryBackgroundColor = "#BBEEF0"
 textColor = "#1C3148"
 font = "sans serif"
+
+[server]
+port = 8080
+address = "0.0.0.0"
+baseUrlPath = "chatbot-mental-health"
+headless = true
+gatherUsageStats = false

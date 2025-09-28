@@ -1,13 +1,13 @@
+import json
 import os
+from streamlit_cookies_manager import EncryptedCookieManager
 import validators
 import streamlit as st
 
 from utils.sidebar import build_sidebar
 from core.chatbot import Chatbot
-
 from langchain_community.document_loaders import AsyncChromiumLoader
 from langchain_community.document_transformers import Html2TextTransformer
-
 from qdrant_client import QdrantClient
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.core.storage.storage_context import StorageContext
@@ -15,12 +15,19 @@ from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 from llama_index.readers.file import UnstructuredReader
 from llama_index.readers.json import JSONReader
 
+secret = os.getenv("COOKIE_SECRET", "your_very_secret_key")
+cookies = EncryptedCookieManager(password=secret)
+
+if not cookies.ready():
+    st.stop()
 
 def reset_chatbot():
     if "chatbot" in st.session_state:
         chatbot = st.session_state.chatbot
         settings = chatbot.get_setting()
-        st.session_state.chatbot = Chatbot(settings["llm"], settings["embedding_model"], settings["vector_store"])
+        st.session_state.chatbot = Chatbot(
+            settings["llm"], settings["embedding_model"], settings["vector_store"], user_id=st.session_state.user["_id"]
+        )
         print(st.session_state.chatbot.get_setting())
     else:
         st.switch_page("app.py")
@@ -32,13 +39,16 @@ def upload_files(files, path):
         try:
             save_path = os.path.join(path, file.name)
             if os.path.exists(save_path):
-                st.markdown("""
+                st.markdown(
+                    """
                 <style>
                     [data-testid=stToast] {
                         background-color: #FFC152;
                     }
                 </style>
-                """, unsafe_allow_html=True)
+                """,
+                    unsafe_allow_html=True,
+                )
                 st.toast("{} already exists!".format(file.name), icon="⚠")
             else:
                 with open(save_path, "wb") as f:
@@ -89,7 +99,7 @@ def display_files(path):
                 size = os.stat(os.path.join(path, file)).st_size
                 st.write(f"{round(size / (1024 * 1024), 2)} MB")
             with col3:
-                delete = st.button("🗑️", key="delete"+str(i))
+                delete = st.button("🗑️", key="delete" + str(i))
                 delete_button.append(delete)
 
     if True in delete_button:
@@ -103,12 +113,17 @@ def display_files(path):
 def indexing_data(path, file_name):
     file_path = os.path.join(path, file_name)
     print(file_path)
-    with st.spinner(text="Loading and indexing – hang tight! This should take a few minutes, don't turn off or switch pages!"):
+    with st.spinner(
+        text="Loading and indexing – hang tight! This should take a few minutes, don't turn off or switch pages!"
+    ):
         # Read & load document
-        reader = SimpleDirectoryReader(input_files=[file_path], file_extractor={
-            ".pdf":UnstructuredReader(),
-            ".json":JSONReader(),
-        })
+        reader = SimpleDirectoryReader(
+            input_files=[file_path],
+            file_extractor={
+                ".pdf": UnstructuredReader(),
+                ".json": JSONReader(),
+            },
+        )
         documents = reader.load_data()
 
         component = os.path.splitext(file_name)
@@ -152,6 +167,7 @@ def reindex():
         indexing_data(path, file)
     st.success("Successfully reset index")
 
+
 # Styling
 st.markdown(
     """
@@ -189,11 +205,13 @@ st.markdown(
 
 
 # Main Program
-if "user" not in st.session_state:
+if "user" not in cookies or not cookies["user"]:
     st.switch_page("pages/authentication.py")
 else:
-    build_sidebar()
-    st.session_state.chatbot = Chatbot()
+    if "user" not in st.session_state:
+        st.session_state.user = json.loads(cookies["user"])
+    build_sidebar(cookies)
+    st.session_state.chatbot = Chatbot(user_id=st.session_state.user["_id"])
     chatbot = st.session_state.chatbot
 
     tab1, tab2 = st.tabs(["Upload", "Management"])

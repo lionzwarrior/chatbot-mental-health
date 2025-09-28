@@ -1,23 +1,39 @@
-from prometheus_client import Histogram, start_http_server, REGISTRY
 import os
 import threading
 
+from prometheus_client import Gauge, Counter, start_http_server, REGISTRY
+
+POD_NAME = os.getenv('POD_NAME', 'unknown-pod')
+
 try:
-    CHATBOT_RESPONSE_TIME = REGISTRY._names_to_collectors[
-        "chatbot_response_duration_seconds"
+    CONCURRENT_REQUESTS = REGISTRY._names_to_collectors[
+        "chatbot_concurrent_requests"
     ]
-    print("Prometheus metric 'chatbot_response_duration_seconds' already initialized.")
+    print("Prometheus metric 'chatbot_concurrent_requests' already initialized.")
 except KeyError:
-    CHATBOT_RESPONSE_TIME = Histogram(
-        "chatbot_response_duration_seconds",
-        "Duration of chatbot responses.",
-        ["model_name"],
-        buckets=[1.0, 5.0, 10.0, 20.0, 30.0, 60.0, 120.0, float("inf")],
+    CONCURRENT_REQUESTS = Gauge(
+        "chatbot_concurrent_requests",
+        "Number of concurrent chatbot requests.",
+        ["pod"]
     )
-    print("Prometheus metric 'chatbot_response_duration_seconds' initialized.")
+    print("Prometheus metric 'chatbot_concurrent_requests' initialized.")
+    
+
+try:
+    REQUESTS_COUNTER = REGISTRY._names_to_collectors[
+        "chatbot_requests_total"
+    ]
+    print("Prometheus metric 'chatbot_requests_total' already initialized.")
+except KeyError:
+    REQUESTS_COUNTER = Counter(
+        "chatbot_requests_total",
+        "Total number of chatbot requests.",
+        ["pod"]
+    )
+    print("Prometheus metric 'chatbot_requests_total' initialized.")
+
 
 metrics_server_lock = threading.Lock()
-
 
 def start_metrics_server(port=8000):
     """Starts a simple HTTP server to expose Prometheus metrics."""
@@ -35,5 +51,16 @@ def start_metrics_server(port=8000):
                     print(f"Error starting metrics server: {e}")
 
 
-def observe_chatbot_response_time(duration, model_name):
-    CHATBOT_RESPONSE_TIME.labels(model_name).observe(duration)
+def inc_concurrent_requests():
+    """Increment the concurrent request gauge for this pod."""
+    CONCURRENT_REQUESTS.labels(POD_NAME).inc()
+
+
+def dec_concurrent_requests():
+    """Decrement the concurrent request gauge for this pod."""
+    CONCURRENT_REQUESTS.labels(POD_NAME).dec()
+
+
+def count_request():
+    """Increment the total request counter for this pod and user."""
+    REQUESTS_COUNTER.labels(POD_NAME).inc()

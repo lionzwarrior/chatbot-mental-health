@@ -1,13 +1,12 @@
 import streamlit as st
+
 from core.connection import Connection
 from core.chat_session import ChatSession
-from utils.utils import get_cookies
 from bson import ObjectId
-
-cookies = get_cookies()
+    
 conn = Connection()
 
-def build_sidebar():
+def build_sidebar(cookies):
     st.markdown(
         """
         <style>
@@ -52,6 +51,8 @@ def build_sidebar():
                 
                 if language and language != cookies.get("language"):
                     cookies["language"] = language
+                    print("language changed to", language)
+                    cookies.save()
 
             st.page_link("app.py", label="🏠 Home")
             st.page_link("pages/profile.py", label="👤 {}".format(conn.find_user({"_id": ObjectId(st.session_state.user["_id"])})["username"]))
@@ -60,7 +61,6 @@ def build_sidebar():
         logout = st.button("Log out")
     
         if logout:
-            del st.session_state.user
             del cookies["user"]
             st.switch_page("pages/authentication.py")
 

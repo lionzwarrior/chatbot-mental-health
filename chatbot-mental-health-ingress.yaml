@@ -1,18 +1,19 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
- name: chatbot-mental-health-app
- namespace: remmanuel
+  name: chatbot-mental-health-app
+  namespace: remmanuel
+  annotations:
 spec:
- ingressClassName: traefik
- rules:
-   - host: pakcarik.petra.ac.id
-     http:
-       paths:
-       - backend:
-           service:
-             name: chatbot-mental-health-service
-             port:
-               number: 80
-         path: /chatbot-mental-health
-         pathType: Prefix
+  ingressClassName: traefik
+  rules:
+    - host: pakcarik.petra.ac.id
+      http:
+        paths:
+          - path: /chatbot-mental-health
+            pathType: Prefix
+            backend:
+              service:
+                name: chatbot-mental-health-service
+                port:
+                  name: streamlit-http
