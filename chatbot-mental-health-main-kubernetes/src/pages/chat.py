@@ -2,12 +2,13 @@ import os
 import streamlit as st
 import time
 import json
+import ollama
 
 from datetime import datetime, timedelta, timezone
 
 from streamlit_cookies_manager import EncryptedCookieManager
 from utils.sidebar import build_sidebar
-from core.chatbot import Chatbot, get_first_available_model
+from core.chatbot import Chatbot
 from core.chat_session import ChatSession
 from utils.metrics import inc_concurrent_requests, dec_concurrent_requests
 
@@ -16,6 +17,25 @@ cookies = EncryptedCookieManager(password=secret)
 
 if not cookies.ready():
     st.stop()
+    
+
+def get_first_available_model():
+    try:
+        client = ollama.Client(host=st.secrets["ollama"]["url"])
+        model_list = client.list()["models"]
+
+        if model_list:
+            first_model_name = model_list[0]["model"]
+            print(
+                f"✅ Found available Ollama model. Setting default to: {first_model_name}"
+            )
+            return first_model_name
+        else:
+            print("⚠️ Ollama is running, but no models were found.")
+            return None
+    except Exception as e:
+        print(f"❌ Could not connect to Ollama to list models: {e}")
+        return None
 
 
 st.markdown(

@@ -20,25 +20,6 @@ from tenacity import (
     retry_if_exception_type,
 )
 
-def get_first_available_model():
-    try:
-        client = ollama.Client(host=st.secrets["ollama"]["url"])
-        model_list = client.list()["models"]
-
-        if model_list:
-            first_model_name = model_list[0]["model"]
-            print(
-                f"✅ Found available Ollama model. Setting default to: {first_model_name}"
-            )
-            return first_model_name
-        else:
-            print("⚠️ Ollama is running, but no models were found.")
-            return None
-    except Exception as e:
-        print(f"❌ Could not connect to Ollama to list models: {e}")
-        return None
-
-
 conn = Connection()
 LOG_FILE = "time_to_first_token_response_time.log"
 

@@ -153,7 +153,6 @@ kubectl create secret generic cookie-secret --from-literal=encryption-password='
 
 
 ## Docker build Chatbot Mental Heatlh Old
-
 docker build -t lionzwarrior10/chatbot-mental-health-old:latest .
 
 docker push lionzwarrior10/chatbot-mental-health-old:latest

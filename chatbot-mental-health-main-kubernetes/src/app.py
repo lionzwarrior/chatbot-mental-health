@@ -2,12 +2,12 @@ import os
 import streamlit as st
 import json
 import threading
+import ollama
 
 from streamlit_cookies_manager import EncryptedCookieManager
 
 st.set_page_config(initial_sidebar_state="expanded")
 
-from core.chatbot import get_first_available_model
 from utils.sidebar import build_sidebar
 from utils.metrics import start_metrics_server, count_request
 
@@ -24,6 +24,25 @@ if "metrics_server_thread" not in st.session_state:
     metrics_thread.start()
     st.session_state["metrics_server_thread"] = metrics_thread
     print("Metrics server thread initialized and started.")
+    
+
+def get_first_available_model():
+    try:
+        client = ollama.Client(host=st.secrets["ollama"]["url"])
+        model_list = client.list()["models"]
+
+        if model_list:
+            first_model_name = model_list[0]["model"]
+            print(
+                f"✅ Found available Ollama model. Setting default to: {first_model_name}"
+            )
+            return first_model_name
+        else:
+            print("⚠️ Ollama is running, but no models were found.")
+            return None
+    except Exception as e:
+        print(f"❌ Could not connect to Ollama to list models: {e}")
+        return None
 
 
 # Styling
@@ -62,16 +81,15 @@ else:
     
     if "chatbot" not in cookies or not cookies["chatbot"]:
         cookies["chatbot"] = get_first_available_model()
-        cookies.save()
         
     if "embedding" not in cookies or not cookies["embedding"]:
         cookies["embedding"] = "intfloat/multilingual-e5-large"
-        cookies.save()
         
     if "vector_store" not in cookies or not cookies["vector_store"]:        
         cookies["vector_store"] = "Qdrant"
-        cookies.save()
-
+        
+    cookies.save()
+    
     # Initialize chat history
     with st.chat_message("assistant"):
         st.markdown("##### Counsel@PCU-Bot")
